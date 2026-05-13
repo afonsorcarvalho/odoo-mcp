@@ -1,0 +1,9 @@
+{
+  "name": "odoo-mcp",
+  "version": "0.1.0",
+  "description": "Odoo ERP connector via XML-RPC. Search, read, create, write, unlink any model.",
+  "author": {
+    "name": "Afonso Carvalho"
+  },
+  "keywords": ["odoo", "erp", "xml-rpc", "mcp"]
+}

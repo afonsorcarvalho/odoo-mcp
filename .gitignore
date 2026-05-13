@@ -1,0 +1,22 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+.uv/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# local MCP config with credentials — never commit
+.mcp.json
+
+# claude code local data
+.claude/
+.vscode/
+.git.backup/
+
+# unrelated personal files
+Resumo_OS_*.docx
+scripts/gen_resumo_*.py

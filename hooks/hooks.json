@@ -1,0 +1,17 @@
+{
+  "description": "Auto-clean zombie odoo-mcp processes (parent dead) on session start.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run \"${CLAUDE_PLUGIN_ROOT}/scripts/mcp_zombies.py\" --kill --quiet",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

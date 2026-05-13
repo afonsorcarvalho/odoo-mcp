@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "odoo": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "${CLAUDE_PLUGIN_ROOT}/server",
+        "run",
+        "odoo-mcp"
+      ],
+      "env": {
+        "ODOO_URL": "https://your-instance.odoo.com",
+        "ODOO_DB": "your-database",
+        "ODOO_USER": "your-user@example.com",
+        "ODOO_PASSWORD": "${ODOO_PASSWORD}"
+      }
+    }
+  }
+}

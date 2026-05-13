@@ -1,0 +1,13 @@
+{
+  "name": "odoo-mcp-local",
+  "owner": {
+    "name": "Afonso Carvalho"
+  },
+  "plugins": [
+    {
+      "name": "odoo-mcp",
+      "source": "./",
+      "description": "Odoo ERP connector via XML-RPC. Search, read, create, write, unlink any model."
+    }
+  ]
+}
