@@ -125,6 +125,71 @@ def test_connect_jsonrpc_uses_jsonrpc_authenticate(monkeypatch):
     assert auth_calls[0] == ("http://odoo.local", "testdb", "admin", "secret")
 
 
+def test_exec_kw_falls_back_to_jsonrpc_on_marshal_none_fault(monkeypatch):
+    """XMLRPC profile: server-side 'cannot marshal None' fault → retry via JSON-RPC."""
+    from odoo_mcp_server import transport, _jsonrpc
+
+    _setup_profile(monkeypatch, "xmlrpc")
+    transport._warned_marshal_fallback = False
+
+    class FailingModels:
+        def execute_kw(self, *a, **kw):
+            raise xmlrpc.client.Fault(
+                1,
+                "TypeError: cannot marshal None unless allow_none is enabled",
+            )
+
+    def fake_connect():
+        transport._state["testprofile"] = {
+            "uid": 9,
+            "models": FailingModels(),
+            "transport": "xmlrpc",
+            "url": "http://odoo.local",
+        }
+        return 9, transport._state["testprofile"]["models"], "testdb", "secret"
+
+    monkeypatch.setattr(transport, "connect", fake_connect)
+
+    jsonrpc_calls = []
+
+    def fake_jsonrpc_execute_kw(url, db, uid, password, model, method, args, kwargs, timeout):
+        jsonrpc_calls.append((url, db, uid, model, method))
+        return {"type": "ir.actions.act_window", "res_id": None}
+
+    monkeypatch.setattr(_jsonrpc, "execute_kw", fake_jsonrpc_execute_kw)
+
+    result = transport.exec_kw("sale.order", "action_confirm", [[1]], {})
+
+    assert result == {"type": "ir.actions.act_window", "res_id": None}
+    assert len(jsonrpc_calls) == 1
+    assert jsonrpc_calls[0] == ("http://odoo.local", "testdb", 9, "sale.order", "action_confirm")
+
+
+def test_exec_kw_non_marshal_fault_propagates(monkeypatch):
+    """Other XMLRPC faults must NOT trigger JSON-RPC fallback."""
+    from odoo_mcp_server import transport
+
+    _setup_profile(monkeypatch, "xmlrpc")
+
+    class FailingModels:
+        def execute_kw(self, *a, **kw):
+            raise xmlrpc.client.Fault(2, "ValidationError: bad data")
+
+    def fake_connect():
+        transport._state["testprofile"] = {
+            "uid": 1,
+            "models": FailingModels(),
+            "transport": "xmlrpc",
+            "url": "http://odoo.local",
+        }
+        return 1, transport._state["testprofile"]["models"], "testdb", "secret"
+
+    monkeypatch.setattr(transport, "connect", fake_connect)
+
+    with pytest.raises(xmlrpc.client.Fault):
+        transport.exec_kw("res.partner", "create", [{}], {})
+
+
 def test_connect_xmlrpc_uses_xmlrpc_authenticate(monkeypatch):
     from odoo_mcp_server import transport
 

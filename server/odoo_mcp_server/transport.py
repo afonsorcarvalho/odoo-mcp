@@ -151,6 +151,19 @@ def _is_session_fault(exc: xmlrpc.client.Fault) -> bool:
     return any(s in msg for s in ("accessdenied", "session expired", "sessionexpired"))
 
 
+def _is_marshal_none_fault(exc: xmlrpc.client.Fault) -> bool:
+    """Odoo XMLRPC endpoint refuses to serialize None in responses.
+
+    Triggered by methods (buttons, onchange, default_get...) returning dicts
+    with None values. JSON-RPC has no such limit — retry there.
+    """
+    msg = exc.faultString or ""
+    return "cannot marshal None" in msg or "marshal None" in msg
+
+
+_warned_marshal_fallback = False
+
+
 def invalidate_active() -> None:
     name = profiles.current_profile_name()
     if name and name in _state:
@@ -179,6 +192,23 @@ def exec_kw(model: str, method: str, args: list, kwargs: dict | None = None) -> 
                 invalidate_active()
                 reauthed = True
                 continue
+            if _is_marshal_none_fault(e):
+                name, url, db, user, password, transport_kind = _active_creds()
+                if transport_kind != "jsonrpc":
+                    global _warned_marshal_fallback
+                    if not _warned_marshal_fallback:
+                        log.warning(
+                            "Odoo XMLRPC cannot marshal None in response for "
+                            "model=%s method=%s — falling back to JSON-RPC. "
+                            "Switch profile %r to transport=jsonrpc to avoid this.",
+                            model, method, name,
+                        )
+                        _warned_marshal_fallback = True
+                    uid, _models, _db, _pw = connect()
+                    return _jsonrpc.execute_kw(
+                        url, db, uid, password, model, method,
+                        args, kwargs or {}, _timeout(),
+                    )
             log.error("Odoo fault model=%s method=%s: %s", model, method, e.faultString)
             raise
         except _TRANSIENT as e:
